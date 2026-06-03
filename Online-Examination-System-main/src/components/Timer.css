@@ -1,0 +1,116 @@
+.timer-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timer-radial-wrapper {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.timer-radial-svg {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.timer-radial-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 4px;
+}
+
+.timer-radial-progress {
+  fill: none;
+  stroke: var(--accent-secondary);
+  stroke-width: 4px;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke var(--transition-normal);
+}
+
+.timer-text-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-bell-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--text-secondary);
+  transition: color var(--transition-normal);
+}
+
+.timer-digital-display {
+  display: flex;
+  flex-direction: column;
+}
+
+.timer-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.timer-digits {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  min-width: 60px;
+  transition: color var(--transition-normal);
+}
+
+/* Critical Warning animations */
+.timer-radial-progress.warning {
+  stroke: var(--accent-warning);
+  filter: drop-shadow(0 0 4px var(--accent-warning));
+}
+
+.timer-radial-progress.critical {
+  stroke: var(--accent-danger);
+  filter: drop-shadow(0 0 6px var(--accent-danger));
+  animation: strokePulse 1s infinite alternate;
+}
+
+.timer-digits.warning {
+  color: var(--accent-warning);
+}
+
+.timer-digits.critical {
+  color: var(--accent-danger);
+  animation: textFlash 1s infinite;
+}
+
+.timer-bell-icon.warning {
+  color: var(--accent-warning);
+}
+
+.timer-bell-icon.critical {
+  color: var(--accent-danger);
+  animation: bellShake 0.5s infinite alternate ease-in-out;
+}
+
+@keyframes strokePulse {
+  0% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+@keyframes textFlash {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+@keyframes bellShake {
+  0% { transform: rotate(-8deg); }
+  100% { transform: rotate(8deg); }
+}
