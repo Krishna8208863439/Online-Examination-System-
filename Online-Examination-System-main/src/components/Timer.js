@@ -1,13 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Timer.css';
 
-export default function Timer({ durationMinutes, onTimeExpired }) {
+export default function Timer({ durationMinutes, initialSeconds, paused = false, onTimeExpired, onTick }) {
   const totalSeconds = durationMinutes * 60;
-  const [secondsLeft, setSecondsLeft] = useState(totalSeconds);
+  const [secondsLeft, setSecondsLeft] = useState(initialSeconds !== undefined ? initialSeconds : totalSeconds);
+  const pausedRef = useRef(paused);
+
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   useEffect(() => {
-    setSecondsLeft(totalSeconds);
-  }, [totalSeconds]);
+    if (initialSeconds === undefined) {
+      setSecondsLeft(totalSeconds);
+    }
+  }, [totalSeconds, initialSeconds]);
 
   useEffect(() => {
     if (secondsLeft <= 0) {
@@ -15,49 +20,46 @@ export default function Timer({ durationMinutes, onTimeExpired }) {
       return;
     }
 
+    if (onTick) {
+      onTick(secondsLeft);
+    }
+
     const interval = setInterval(() => {
-      setSecondsLeft(prev => prev - 1);
+      if (!pausedRef.current) {
+        setSecondsLeft(prev => prev - 1);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [secondsLeft, onTimeExpired]);
+  }, [secondsLeft, onTimeExpired, onTick]);
 
-  // Formatter
   const formatTime = () => {
     const mins = Math.floor(secondsLeft / 60);
     const secs = secondsLeft % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Radial Circle Calculations
   const radius = 20;
-  const circumference = 2 * Math.PI * radius; // ~125.66
+  const circumference = 2 * Math.PI * radius;
   const progressRatio = secondsLeft / totalSeconds;
   const strokeDashoffset = circumference - progressRatio * circumference;
 
-  // Determine Warning Level
   let warningClass = '';
-  if (secondsLeft <= 60) {
-    warningClass = 'critical';
-  } else if (secondsLeft <= 120) {
-    warningClass = 'warning';
-  }
+  if (secondsLeft <= 60) warningClass = 'critical';
+  else if (secondsLeft <= 120) warningClass = 'warning';
 
   return (
     <div className="timer-container">
-      {/* SVG Radial Gauge */}
+      {paused && (
+        <span style={{ fontSize: '11px', color: 'var(--accent-warning)', marginRight: '8px', fontWeight: 600 }}>
+          ⏸ PAUSED
+        </span>
+      )}
       <div className="timer-radial-wrapper">
         <svg className="timer-radial-svg">
+          <circle cx="24" cy="24" r={radius} className="timer-radial-bg" />
           <circle
-            cx="24"
-            cy="24"
-            r={radius}
-            className="timer-radial-bg"
-          />
-          <circle
-            cx="24"
-            cy="24"
-            r={radius}
+            cx="24" cy="24" r={radius}
             className={`timer-radial-progress ${warningClass}`}
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
@@ -70,7 +72,6 @@ export default function Timer({ durationMinutes, onTimeExpired }) {
         </div>
       </div>
 
-      {/* Digital Timer */}
       <div className="timer-digital-display">
         <span className="timer-label">Time Remaining</span>
         <span className={`timer-digits ${warningClass}`}>

@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 
-export default function Dashboard({ onStartExam, onViewResults }) {
+export default function Dashboard({ onStartExam, onViewResults, onGoToAdmin }) {
   // Candidate Details
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [isRegistered, setIsRegistered] = useState(false);
 
   // Exam Configurations
   const [category, setCategory] = useState('All');
-  const [duration, setDuration] = useState(10); // in minutes
-  const [proctoring, setProctoring] = useState('standard'); // none, standard, strict
+  const [duration, setDuration] = useState(10);
+  const [proctoring, setProctoring] = useState('standard');
+
+  // Geolocation states
+  const [geoStatus, setGeoStatus] = useState('idle'); // idle | loading | granted | denied | error
+  const [geoData, setGeoData] = useState(null);
+  const [geoError, setGeoError] = useState('');
 
   // History and Stats
   const [history, setHistory] = useState([]);
@@ -21,41 +27,47 @@ export default function Dashboard({ onStartExam, onViewResults }) {
     passRate: 0
   });
 
+  // Autosave Check
+  const [autosaveData, setAutosaveData] = useState(null);
+
   useEffect(() => {
-    // Load student profile if exists
     const storedName = localStorage.getItem('aero_student_name');
     const storedEmail = localStorage.getItem('aero_student_email');
-    if (storedName && storedEmail) {
+    const storedStudentId = localStorage.getItem('aero_student_id');
+    if (storedName && storedEmail && storedStudentId) {
       setName(storedName);
       setEmail(storedEmail);
+      setStudentId(storedStudentId);
       setIsRegistered(true);
     }
 
-    // Load exam history
     const storedHistory = localStorage.getItem('aero_exam_history');
     if (storedHistory) {
       const parsedHistory = JSON.parse(storedHistory);
-      // Sort by date descending
       parsedHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
       setHistory(parsedHistory);
       calculateStats(parsedHistory);
+    }
+
+    const storedAutosave = localStorage.getItem('aero_exam_autosave');
+    if (storedAutosave) {
+      try {
+        setAutosaveData(JSON.parse(storedAutosave));
+      } catch (e) {
+        console.error("Failed to parse autosave data", e);
+      }
     }
   }, []);
 
   const calculateStats = (records) => {
     if (records.length === 0) return;
-    
     const total = records.length;
-    let sum = 0;
-    let max = 0;
-    let passes = 0;
-
+    let sum = 0, max = 0, passes = 0;
     records.forEach(r => {
       sum += r.score;
       if (r.score > max) max = r.score;
-      if (r.passed) passes++;
+      if (r.score >= 40) passes++; // 40% passing threshold
     });
-
     setStats({
       totalExams: total,
       avgScore: Math.round(sum / total),
@@ -66,50 +78,109 @@ export default function Dashboard({ onStartExam, onViewResults }) {
 
   const handleRegister = (e) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim()) return;
-
+    if (!name.trim() || !email.trim() || !studentId.trim()) return;
     localStorage.setItem('aero_student_name', name);
     localStorage.setItem('aero_student_email', email);
+    localStorage.setItem('aero_student_id', studentId);
     setIsRegistered(true);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('aero_student_name');
     localStorage.removeItem('aero_student_email');
-    setName('');
-    setEmail('');
-    setIsRegistered(false);
+    localStorage.removeItem('aero_student_id');
+    setName(''); setEmail(''); setStudentId(''); setIsRegistered(false);
+    setGeoStatus('idle'); setGeoData(null);
   };
 
   const handleClearHistory = () => {
     if (window.confirm("Are you sure you want to clear your exam history? This cannot be undone.")) {
       localStorage.removeItem('aero_exam_history');
       setHistory([]);
-      setStats({
-        totalExams: 0,
-        avgScore: 0,
-        highScore: 0,
-        passRate: 0
-      });
+      setStats({ totalExams: 0, avgScore: 0, highScore: 0, passRate: 0 });
     }
+  };
+
+  // ─── Geolocation Logic ───────────────────────────────────────────────────────
+  const requestGeolocation = () => {
+    if (!navigator.geolocation) {
+      setGeoStatus('error');
+      setGeoError('Geolocation is not supported by your browser.');
+      return;
+    }
+    setGeoStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setGeoData({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: position.timestamp
+        });
+        setGeoStatus('granted');
+      },
+      (err) => {
+        setGeoStatus('denied');
+        setGeoError(
+          err.code === 1
+            ? 'Location access is mandatory to verify exam integrity. Please enable location permissions in your browser settings and try again.'
+            : 'Unable to retrieve your location. Please ensure location services are enabled.'
+        );
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
   };
 
   const handleStart = () => {
     if (!isRegistered) return;
+    if (proctoring !== 'none' && geoStatus !== 'granted') {
+      requestGeolocation();
+      return;
+    }
     onStartExam({
       candidateName: name,
       candidateEmail: email,
+      studentId: studentId,
       category,
       duration,
-      proctoring
+      proctoring,
+      geolocation: geoData
     });
   };
+
+  // When geolocation is granted, auto-proceed to exam
+  useEffect(() => {
+    if (geoStatus === 'granted' && geoData && isRegistered) {
+      onStartExam({
+        candidateName: name,
+        candidateEmail: email,
+        studentId: studentId,
+        category,
+        duration,
+        proctoring,
+        geolocation: geoData
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoStatus, geoData]);
 
   return (
     <div className="dashboard-container animate-fade-in">
       <header className="dashboard-header">
-        <h1>AERO GRADE</h1>
-        <p>Advanced Examination & Real-Time Performance Analytics System</p>
+        <div>
+          <h1 style={{ letterSpacing: '1px' }}>SANJAY GHODAWAT INSTITUTE</h1>
+          <p>Official Online Examination & Analytics Portal</p>
+        </div>
+        <button
+          className="btn-outline"
+          onClick={onGoToAdmin}
+          style={{ fontSize: '13px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Teacher Portal
+        </button>
       </header>
 
       {/* Stats Cards */}
@@ -132,8 +203,79 @@ export default function Dashboard({ onStartExam, onViewResults }) {
         </div>
       </section>
 
+      {/* Geolocation Error Banner */}
+      {geoStatus === 'denied' && (
+        <div className="geo-error-banner animate-slide-up">
+          <span style={{ fontSize: '22px' }}>📍</span>
+          <div>
+            <strong>Location Access Required</strong>
+            <p style={{ fontSize: '13px', marginTop: '4px', lineHeight: '1.5', color: 'var(--text-secondary)' }}>{geoError}</p>
+          </div>
+          <button className="btn-primary" onClick={requestGeolocation} style={{ fontSize: '13px', padding: '8px 16px', whiteSpace: 'nowrap' }}>
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {geoStatus === 'loading' && (
+        <div className="geo-loading-banner animate-slide-up">
+          <div className="geo-spinner"></div>
+          <span>Fetching your live location to verify exam integrity…</span>
+        </div>
+      )}
+
+      {geoStatus === 'granted' && geoData && (
+        <div className="geo-success-banner animate-slide-up">
+          <span style={{ fontSize: '20px' }}>✅</span>
+          <span>Location verified — <strong>{geoData.latitude.toFixed(5)}°N, {geoData.longitude.toFixed(5)}°E</strong> — Launching exam…</span>
+        </div>
+      )}
+
+      {/* Autosave Resume Alert Banner */}
+      {autosaveData && (
+        <div className="geo-success-banner animate-slide-up" style={{ background: 'rgba(139, 92, 246, 0.15)', borderColor: 'rgba(139, 92, 246, 0.3)', marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '24px' }}>📝</span>
+            <div style={{ textAlign: 'left' }}>
+              <strong style={{ color: '#fff', fontSize: '15px' }}>In-Progress Exam Attempt Detected</strong>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                Candidate: <strong>{autosaveData.candidateName}</strong> ({autosaveData.studentId}) | Category: <strong>{autosaveData.category}</strong> | Remaining: {Math.floor(autosaveData.secondsLeft / 60)}m {autosaveData.secondsLeft % 60}s
+              </p>
+            </div>
+          </div>
+          <button 
+            className="btn-primary" 
+            onClick={() => {
+              // Auto-restore details
+              localStorage.setItem('aero_student_name', autosaveData.candidateName);
+              localStorage.setItem('aero_student_email', autosaveData.candidateEmail);
+              localStorage.setItem('aero_student_id', autosaveData.studentId);
+              setName(autosaveData.candidateName);
+              setEmail(autosaveData.candidateEmail);
+              setStudentId(autosaveData.studentId);
+              setIsRegistered(true);
+              
+              onStartExam({
+                candidateName: autosaveData.candidateName,
+                candidateEmail: autosaveData.candidateEmail,
+                studentId: autosaveData.studentId,
+                category: autosaveData.category,
+                duration: autosaveData.duration,
+                proctoring: autosaveData.proctoring,
+                geolocation: autosaveData.geolocation,
+                resume: true,
+                autosave: autosaveData
+              });
+            }} 
+            style={{ fontSize: '13px', padding: '8px 16px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, #7c3aed 100%)' }}
+          >
+            Resume Exam Attempt →
+          </button>
+        </div>
+      )}
+
       <div className="dashboard-grid">
-        {/* Left Column: Register or Setup */}
+        {/* Left Column */}
         <section className="glass-panel">
           {!isRegistered ? (
             <form onSubmit={handleRegister} className="animate-slide-up">
@@ -146,34 +288,24 @@ export default function Dashboard({ onStartExam, onViewResults }) {
               </h2>
               <div className="form-group">
                 <label>Full Name</label>
-                <input
-                  type="text"
-                  placeholder="Enter your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
+                <input type="text" placeholder="Enter your name" value={name} onChange={(e) => setName(e.target.value)} required />
+              </div>
+              <div className="form-group">
+                <label>Student ID / Roll Number</label>
+                <input type="text" placeholder="Enter your Student ID (e.g. SGI2026101)" value={studentId} onChange={(e) => setStudentId(e.target.value)} required />
               </div>
               <div className="form-group">
                 <label>Email Address</label>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <input type="email" placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
-              <button type="submit" className="btn-primary start-btn">
-                Register & Continue
-              </button>
+              <button type="submit" className="btn-primary start-btn">Register & Continue</button>
             </form>
           ) : (
             <div className="animate-slide-up">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                 <div>
                   <h3 style={{ fontSize: '18px', fontWeight: 600 }}>Welcome, {name}</h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{email}</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>ID: {studentId} | {email}</p>
                 </div>
                 <button onClick={handleLogout} className="clear-btn" style={{ textDecoration: 'underline' }}>
                   Switch Profile
@@ -198,6 +330,7 @@ export default function Dashboard({ onStartExam, onViewResults }) {
                   <option value="React Development">React Development</option>
                   <option value="CSS & Layout">CSS & Layout</option>
                   <option value="General Web Architecture">General Web Architecture</option>
+                  <option value="Custom">Custom Questions</option>
                 </select>
               </div>
 
@@ -215,46 +348,47 @@ export default function Dashboard({ onStartExam, onViewResults }) {
               <div className="form-group">
                 <label>AI Proctoring Security Level</label>
                 <div className="proctor-options">
-                  <button
-                    type="button"
-                    className={`proctor-btn ${proctoring === 'none' ? 'active' : ''}`}
-                    onClick={() => setProctoring('none')}
-                  >
-                    None
-                  </button>
-                  <button
-                    type="button"
-                    className={`proctor-btn ${proctoring === 'standard' ? 'active' : ''}`}
-                    onClick={() => setProctoring('standard')}
-                  >
-                    Standard
-                  </button>
-                  <button
-                    type="button"
-                    className={`proctor-btn ${proctoring === 'strict' ? 'active' : ''}`}
-                    onClick={() => setProctoring('strict')}
-                  >
-                    Strict
-                  </button>
+                  {['none', 'standard', 'strict'].map(level => (
+                    <button key={level} type="button" className={`proctor-btn ${proctoring === level ? 'active' : ''}`} onClick={() => setProctoring(level)}>
+                      {level.charAt(0).toUpperCase() + level.slice(1)}
+                    </button>
+                  ))}
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: '1.4' }}>
                   {proctoring === 'none' && '🔒 No browser restrictions or proctor logging active.'}
-                  {proctoring === 'standard' && '🛡️ Tracks tab changes/minimization and triggers warnings.'}
-                  {proctoring === 'strict' && '🔥 Strictly terminates and auto-submits exam upon 3 focus/tab violations.'}
+                  {proctoring === 'standard' && '🛡️ Camera face tracking + tab/focus monitoring. Warnings issued.'}
+                  {proctoring === 'strict' && '🔥 Strict face & tab tracking. Auto-submit after 3 violations. Live location required.'}
                 </p>
               </div>
 
-              <button onClick={handleStart} className="btn-primary start-btn" style={{ marginTop: '15px' }}>
-                Launch Exam System
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
+              {/* Geo requirements note */}
+              {proctoring !== 'none' && (
+                <div className="geo-info-note">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-warning)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>Live location access is <strong>required</strong> when proctoring is active. You will be prompted on launch.</span>
+                </div>
+              )}
+
+              <button
+                onClick={handleStart}
+                className="btn-primary start-btn"
+                style={{ marginTop: '15px' }}
+                disabled={geoStatus === 'loading'}
+              >
+                {geoStatus === 'loading' ? 'Fetching Location…' : 'Launch Exam System'}
+                {geoStatus !== 'loading' && (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                )}
               </button>
             </div>
           )}
         </section>
 
-        {/* Right Column: History list */}
+        {/* Right Column: History */}
         <section className="glass-panel history-card">
           <div className="history-header">
             <h2 className="history-title">
@@ -265,9 +399,7 @@ export default function Dashboard({ onStartExam, onViewResults }) {
               Recent Examinations
             </h2>
             {history.length > 0 && (
-              <button onClick={handleClearHistory} className="clear-btn">
-                Clear All
-              </button>
+              <button onClick={handleClearHistory} className="clear-btn">Clear All</button>
             )}
           </div>
 
@@ -305,27 +437,21 @@ export default function Dashboard({ onStartExam, onViewResults }) {
                         </span>
                       </td>
                       <td>
-                        <span className={`badge ${record.passed ? 'badge-success' : 'badge-danger'}`}>
-                          {record.passed ? 'Passed' : 'Failed'}
+                        <span className={`badge ${record.score >= 40 ? 'badge-success' : 'badge-danger'}`}>
+                          {record.score >= 40 ? 'Passed' : 'Failed'}
                         </span>
                         {record.terminated && (
-                          <span className="badge badge-warning" style={{ marginLeft: '5px' }}>
-                            Flagged
-                          </span>
+                          <span className="badge badge-warning" style={{ marginLeft: '5px' }}>Flagged</span>
                         )}
                       </td>
                       <td>
                         {new Date(record.date).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
+                          month: 'short', day: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
                         })}
                       </td>
                       <td>
-                        <span className="action-link" onClick={() => onViewResults(record)}>
-                          View Analytics
-                        </span>
+                        <span className="action-link" onClick={() => onViewResults(record)}>View Analytics</span>
                       </td>
                     </tr>
                   ))}

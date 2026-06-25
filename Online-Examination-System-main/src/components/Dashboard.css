@@ -5,7 +5,9 @@
 }
 
 .dashboard-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 40px;
 }
 
@@ -280,4 +282,69 @@
 .action-link:hover {
   text-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
   text-decoration: underline;
+}
+
+/* ── Geolocation Banners ─────────────────────────────────── */
+.geo-error-banner,
+.geo-loading-banner,
+.geo-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 24px;
+  font-size: 14px;
+  border: 1px solid;
+}
+
+.geo-error-banner {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--text-primary);
+}
+
+.geo-loading-banner {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: var(--accent-warning);
+}
+
+.geo-success-banner {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--accent-success);
+}
+
+.geo-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  border-top-color: var(--accent-warning);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.geo-info-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.geo-info-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
 }

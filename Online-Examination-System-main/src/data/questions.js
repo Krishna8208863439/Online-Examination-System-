@@ -10,6 +10,8 @@ export const questions = [
     ],
     answerIndex: 0,
     category: "JavaScript",
+    marks: 1,
+    subject: "Closures",
     explanation: "A closure is created when a inner function references variables from its outer (enclosing) scope even after the outer function has finished executing. The inner function retains access to the scope in which it was created."
   },
   {
@@ -23,6 +25,8 @@ export const questions = [
     ],
     answerIndex: 1,
     category: "React Development",
+    marks: 1,
+    subject: "React Lists & Keys",
     explanation: "Keys help React identify which items have changed, been added, or been removed. They should be given to elements inside the array to give the elements a stable identity, ensuring optimal virtual DOM diffing performance."
   },
   {
@@ -36,6 +40,8 @@ export const questions = [
     ],
     answerIndex: 1,
     category: "CSS & Layout",
+    marks: 1,
+    subject: "Flexbox Layout",
     explanation: "The 'flex-shrink' CSS property specifies the flex shrink factor of a flex item. If the size of all flex items is larger than the flex container, items shrink to fit according to flex-shrink."
   },
   {
@@ -49,6 +55,8 @@ export const questions = [
     ],
     answerIndex: 1,
     category: "General Web Architecture",
+    marks: 1,
+    subject: "CORS Scripting",
     explanation: "The 'crossorigin' attribute allows error logging for third-party scripts. Without it, errors in external scripts are caught as generic 'Script error.' due to security restrictions."
   },
   {
@@ -62,6 +70,8 @@ export const questions = [
     ],
     answerIndex: 0,
     category: "JavaScript",
+    marks: 1,
+    subject: "Coercion & Equality",
     explanation: "The strict equality operator ('===') does not perform type conversion. It only returns true if both operands have the same value and type. The loose equality operator ('==') performs type coercion before comparison."
   },
   {
@@ -75,6 +85,8 @@ export const questions = [
     ],
     answerIndex: 1,
     category: "General Web Architecture",
+    marks: 1,
+    subject: "HTML5 Semantics",
     explanation: "Semantic HTML elements clearly describe their meaning in a human- and machine-readable way. Examples of non-semantic elements: <div> and <span>. Examples of semantic elements: <form>, <table>, <article>, <section>."
   },
   {
@@ -88,6 +100,8 @@ export const questions = [
     ],
     answerIndex: 2,
     category: "React Development",
+    marks: 1,
+    subject: "React Side Effects",
     explanation: "The 'useEffect' Hook lets you perform side effects in function components. Side effects include data fetching, subscriptions, manual DOM changes, timers, etc."
   },
   {
@@ -101,6 +115,8 @@ export const questions = [
     ],
     answerIndex: 3,
     category: "CSS & Layout",
+    marks: 1,
+    subject: "CSS Positioning",
     explanation: "HTML elements are positioned static by default. Static positioned elements are not affected by the top, bottom, left, and right properties; they always position according to the normal flow of the page."
   },
   {
@@ -114,6 +130,8 @@ export const questions = [
     ],
     answerIndex: 1,
     category: "JavaScript",
+    marks: 1,
+    subject: "Event Propagation",
     explanation: "Event bubbling is a type of event propagation where the event first triggers on the innermost target element, and then successively triggers on the ancestors (parents) of the target element in the DOM tree."
   },
   {
@@ -127,6 +145,8 @@ export const questions = [
     ],
     answerIndex: 1,
     category: "React Development",
+    marks: 1,
+    subject: "React State Updates",
     explanation: "React batches state updates to group multiple updates into a single re-render for better performance. Because of this, state updates are asynchronous and state values are not immediately reflected on the next line after calling the setter."
   },
   {
@@ -140,6 +160,8 @@ export const questions = [
     ],
     answerIndex: 1,
     category: "CSS & Layout",
+    marks: 1,
+    subject: "Box Model",
     explanation: "With 'box-sizing: border-box', the width and height properties include the content, padding, and border. This makes layout sizing much more intuitive and predictable."
   },
   {
@@ -153,6 +175,8 @@ export const questions = [
     ],
     answerIndex: 0,
     category: "General Web Architecture",
+    marks: 1,
+    subject: "Internet DNS System",
     explanation: "DNS acts as the phonebook of the internet. Humans access information online through domain names. Web browsers interact through Internet Protocol (IP) addresses. DNS translates domain names to IP addresses so browsers can load resources."
   }
 ];
